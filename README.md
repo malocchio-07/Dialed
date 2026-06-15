@@ -5,9 +5,10 @@ map, calculate sun position and shooting windows, check cloud cover, get camera
 setting suggestions, and organize photos by editing status.
 
 Built as a **fully static single-page app** so it can be hosted for free on
-**GitHub Pages**. There is no backend server — auth, database, and image storage
-all run client-side against [Supabase](https://supabase.com), and weather comes
-straight from the free [Open-Meteo](https://open-meteo.com) API.
+**Cloudflare Pages**, which builds from a private GitHub repo at no cost. There
+is no backend server — auth, database, and image storage all run client-side
+against [Supabase](https://supabase.com), and weather comes straight from the
+free [Open-Meteo](https://open-meteo.com) API.
 
 ## Tech stack
 
@@ -28,7 +29,7 @@ which needs a free, client-side API key:
 
 1. Request a key at <https://shademap.app/about/> (it's emailed to you).
 2. Add it as `NEXT_PUBLIC_SHADEMAP_KEY` — in `.env.local` for local dev, and as a
-   GitHub repo secret for the live site (see below).
+   Cloudflare Pages environment variable for the live site (see below).
 
 Without a key the app works normally; the "Sun & shade" button is just disabled.
 
@@ -48,8 +49,8 @@ Without a key the app works normally; the "Sun & shade" button is just disabled.
 | `/planner` | Shoot plan dashboard (sun windows, weather, settings) |
 
 > Dynamic data (spots, plans, photos) is keyed by **query string** rather than a
-> path segment (`/spots?id=…`, not `/spots/:id`). This is deliberate — GitHub
-> Pages can't server-render dynamic path segments, and query params avoid the
+> path segment (`/spots?id=…`, not `/spots/:id`). This is deliberate — a static
+> export can't server-render dynamic path segments, and query params avoid the
 > "404 on refresh" problem that path-based dynamic routes hit on static hosts.
 
 ## Local development
@@ -69,23 +70,32 @@ It creates the `photo_spots`, `shoot_plans`, and `photos` tables, the `photos`
 storage bucket, and Row Level Security policies so each user only sees their own
 data.
 
-## Deploying to GitHub Pages
+## Deploying to Cloudflare Pages
 
-1. **Repository → Settings → Pages → Build and deployment → Source: GitHub Actions.**
-2. **Repository → Settings → Secrets and variables → Actions** — add these
-   repository secrets (all are safe to expose in client code: the Supabase anon
-   key is protected by RLS, and the Mapbox token should be URL-restricted in the
-   Mapbox dashboard):
+Cloudflare Pages builds and hosts static sites for free, including from a
+**private** GitHub repo — no paid plan required (unlike GitHub Pages, which
+only serves private repos on a paid GitHub plan).
+
+1. Sign up at [pages.cloudflare.com](https://pages.cloudflare.com) (free).
+2. **Workers & Pages → Create application → Pages → Connect to Git**, then
+   authorize Cloudflare's GitHub App for this repository (you can scope access
+   to just this one repo).
+3. Build settings:
+   - Framework preset: **Next.js (Static HTML Export)**
+   - Build command: `npm run build`
+   - Build output directory: `out`
+4. **Settings → Environment variables** — add these (all are safe to expose in
+   client code: the Supabase anon key is protected by RLS, and the Mapbox token
+   should be URL-restricted in the Mapbox dashboard):
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `NEXT_PUBLIC_MAPBOX_TOKEN`
    - `NEXT_PUBLIC_SHADEMAP_KEY` (optional — enables the Sun & shade feature)
-3. Push to `main`. The workflow in
-   [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) builds the
-   static site and publishes it. The base path (e.g. `/Dialed`) is injected
-   automatically from the Pages configuration.
+5. Save and deploy. Every push to the connected branch triggers a new build
+   automatically.
 
-The site will be served at `https://<username>.github.io/<repo>/`.
+The site will be served at `https://<project-name>.pages.dev` (a custom domain
+can be attached later for free, too).
 
 > **Note on a static deploy:** `NEXT_PUBLIC_*` values are baked into the public
 > JavaScript bundle at build time. That's expected here — the Supabase anon key
