@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import type { ShootPlan } from '@/types';
 import { MapPin, Cloud, Sunrise, Sunset, Camera, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { formatTime } from '@/lib/sun';
@@ -14,7 +14,6 @@ import { Suspense } from 'react';
 type Props = { plans: ShootPlan[] };
 
 function PlannerInner({ plans: initial }: Props) {
-  const router = useRouter();
   const params = useSearchParams();
   const highlightId = params.get('plan');
 
@@ -207,7 +206,7 @@ function PlanCard({
           {/* Actions */}
           <div className="flex items-center justify-between pt-1">
             {spot && (
-              <Link href={`/spots/${spot.id}`} className="text-xs text-[var(--accent)] hover:underline">
+              <Link href={`/spots?id=${spot.id}`} className="text-xs text-[var(--accent)] hover:underline">
                 View spot →
               </Link>
             )}

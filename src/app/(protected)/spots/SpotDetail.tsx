@@ -7,7 +7,7 @@ import { ArrowLeft, Edit2, MapPin, Clock, Cloud, Trash2, CalendarPlus } from 'lu
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { STATUS_CONFIG } from '@/lib/utils';
-import { formatTime, getSunTimes } from '@/lib/sun';
+import { getSunTimes } from '@/lib/sun';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { PhotoSpot, Photo, ShootPlan } from '@/types';
@@ -18,9 +18,10 @@ type Props = {
   spot: PhotoSpot;
   photos: Photo[];
   plans: ShootPlan[];
+  onReload: () => void;
 };
 
-export function SpotDetail({ spot, photos, plans }: Props) {
+export function SpotDetail({ spot, photos, plans, onReload }: Props) {
   const router = useRouter();
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -48,7 +49,7 @@ export function SpotDetail({ spot, photos, plans }: Props) {
             <h1 className="font-bold text-lg truncate max-w-[200px]">{spot.name}</h1>
           </div>
           <div className="flex gap-2">
-            <Link href={`/spots/${spot.id}/edit`}>
+            <Link href={`/spots/edit?id=${spot.id}`}>
               <Button variant="ghost" size="sm"><Edit2 className="w-4 h-4" /></Button>
             </Link>
             <Button variant="ghost" size="sm" onClick={deleteSpot} loading={deleting}>
@@ -151,7 +152,7 @@ export function SpotDetail({ spot, photos, plans }: Props) {
         <PlanModal
           spot={spot}
           onClose={() => setShowPlanModal(false)}
-          onSaved={() => { setShowPlanModal(false); router.refresh(); }}
+          onSaved={() => { setShowPlanModal(false); onReload(); }}
         />
       )}
     </div>

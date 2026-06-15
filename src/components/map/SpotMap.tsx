@@ -123,7 +123,7 @@ export function SpotMap({ spots, onAddSpot }: Props) {
                 </div>
               )}
               <Link
-                href={`/spots/${popup.id}`}
+                href={`/spots?id=${popup.id}`}
                 className="block text-center text-xs font-medium bg-[var(--accent)] text-black rounded-lg py-1.5 mt-1 hover:bg-[var(--accent-dim)] transition-colors"
               >
                 View spot

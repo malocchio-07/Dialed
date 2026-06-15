@@ -23,14 +23,15 @@ type Spot = { id: string; name: string };
 type Props = {
   photos: Photo[];
   spots: Spot[];
+  initialSpotId?: string;
 };
 
-export function GalleryClient({ photos: initial, spots }: Props) {
+export function GalleryClient({ photos: initial, spots, initialSpotId = '' }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [photos, setPhotos] = useState<Photo[]>(initial);
   const [filter, setFilter] = useState<PhotoStatus | 'all'>('all');
-  const [selectedSpot, setSelectedSpot] = useState<string>('');
+  const [selectedSpot, setSelectedSpot] = useState<string>(initialSpotId);
   const [uploading, setUploading] = useState(false);
   const [selected, setSelected] = useState<Photo | null>(null);
 

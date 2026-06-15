@@ -80,11 +80,11 @@ export function SpotForm({ spot }: Props) {
       if (spot) {
         const { error } = await supabase.from('photo_spots').update(payload).eq('id', spot.id);
         if (error) throw error;
-        router.push(`/spots/${spot.id}`);
+        router.push(`/spots?id=${spot.id}`);
       } else {
         const { data, error } = await supabase.from('photo_spots').insert(payload).select().single();
         if (error) throw error;
-        router.push(`/spots/${data.id}`);
+        router.push(`/spots?id=${data.id}`);
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to save spot');
@@ -98,7 +98,7 @@ export function SpotForm({ spot }: Props) {
       <div className="max-w-xl mx-auto px-4 py-6">
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
-          <Link href={spot ? `/spots/${spot.id}` : '/map'} className="text-[var(--muted)] hover:text-[var(--foreground)]">
+          <Link href={spot ? `/spots?id=${spot.id}` : '/map'} className="text-[var(--muted)] hover:text-[var(--foreground)]">
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <h1 className="text-xl font-bold">{spot ? 'Edit spot' : 'New spot'}</h1>
@@ -176,7 +176,7 @@ export function SpotForm({ spot }: Props) {
           )}
 
           <div className="flex gap-3 pb-4">
-            <Link href={spot ? `/spots/${spot.id}` : '/map'} className="flex-1">
+            <Link href={spot ? `/spots?id=${spot.id}` : '/map'} className="flex-1">
               <Button type="button" variant="secondary" className="w-full">Cancel</Button>
             </Link>
             <Button type="submit" loading={loading} className="flex-1">

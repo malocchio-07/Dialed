@@ -1,15 +1,40 @@
-import { createClient } from '@/lib/supabase/server';
-import { MapClient } from './MapClient';
+'use client';
 
-export default async function MapPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
+import { SpotMap } from '@/components/map/SpotMap';
+import type { PhotoSpot } from '@/types';
 
-  const { data: spots } = await supabase
-    .from('photo_spots')
-    .select('*')
-    .eq('user_id', user!.id)
-    .order('created_at', { ascending: false });
+export default function MapPage() {
+  const router = useRouter();
+  const [spots, setSpots] = useState<PhotoSpot[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  return <MapClient initialSpots={spots ?? []} />;
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from('photo_spots')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        setSpots((data as PhotoSpot[]) ?? []);
+        setLoading(false);
+      });
+  }, []);
+
+  function handleAddSpot(lat: number, lng: number) {
+    router.push(`/spots/new?lat=${lat.toFixed(6)}&lng=${lng.toFixed(6)}`);
+  }
+
+  return (
+    <div className="h-full w-full relative">
+      {loading && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-[var(--background)] text-[var(--muted)]">
+          Loading map…
+        </div>
+      )}
+      <SpotMap spots={spots} onAddSpot={handleAddSpot} />
+    </div>
+  );
 }
