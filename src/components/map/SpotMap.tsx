@@ -3,22 +3,49 @@
 import { useCallback, useRef, useState, useEffect } from 'react';
 import Map, { Marker, Popup, NavigationControl, GeolocateControl } from 'react-map-gl/mapbox';
 import type { MapRef } from 'react-map-gl/mapbox';
+import type ShadeMap from 'mapbox-gl-shadow-simulator';
 import type { PhotoSpot } from '@/types';
 import { MapPin, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  SHADEMAP_KEY,
+  TERRAIN_SOURCE,
+  shadowsAvailable,
+  ensureBuildingSource,
+  getBuildingFeatures,
+} from '@/lib/shademap';
+import { ShadowControls } from './ShadowControls';
 import Link from 'next/link';
 import 'mapbox-gl/dist/mapbox-gl.css';
+
+type Focus = { lat: number; lng: number; zoom?: number };
 
 type Props = {
   spots: PhotoSpot[];
   onAddSpot?: (lat: number, lng: number) => void;
+  /** Show the sun & shade controls. */
+  shadow?: boolean;
+  /** Center the map on a single point (spot detail embed). */
+  focus?: Focus;
+  /** Compact embed: no add-spot UI, no spot count, single focus marker. */
+  compact?: boolean;
 };
 
-export function SpotMap({ spots, onAddSpot }: Props) {
+const DEFAULT_CENTER = { lat: 34.0522, lng: -118.2437 };
+
+export function SpotMap({ spots, onAddSpot, shadow = false, focus, compact = false }: Props) {
   const mapRef = useRef<MapRef>(null);
+  const shadeRef = useRef<ShadeMap | null>(null);
+
   const [popup, setPopup] = useState<PhotoSpot | null>(null);
   const [addingMode, setAddingMode] = useState(false);
   const [newMarker, setNewMarker] = useState<{ lat: number; lng: number } | null>(null);
+
+  const [mapLoaded, setMapLoaded] = useState(false);
+  const [shadowOn, setShadowOn] = useState(false);
+  const [shadowDate, setShadowDate] = useState(() => new Date());
+  const [tilt, setTilt] = useState(false);
+  const [center, setCenter] = useState(focus ? { lat: focus.lat, lng: focus.lng } : DEFAULT_CENTER);
 
   const handleMapClick = useCallback((e: { lngLat: { lat: number; lng: number } }) => {
     if (!addingMode) return;
@@ -37,27 +64,73 @@ export function SpotMap({ spots, onAddSpot }: Props) {
     if (!addingMode) setNewMarker(null);
   }, [addingMode]);
 
+  // Create / tear down the ShadeMap overlay when shadow mode toggles.
+  useEffect(() => {
+    const map = mapRef.current?.getMap();
+    if (!shadowOn || !mapLoaded || !map || !shadowsAvailable()) return;
+
+    let cancelled = false;
+    (async () => {
+      const { default: ShadeMapCtor } = await import('mapbox-gl-shadow-simulator');
+      if (cancelled || !mapRef.current) return;
+      const liveMap = mapRef.current.getMap();
+      ensureBuildingSource(liveMap);
+      shadeRef.current = new ShadeMapCtor({
+        apiKey: SHADEMAP_KEY,
+        date: shadowDate,
+        color: '#0a1020',
+        opacity: 0.55,
+        terrainSource: TERRAIN_SOURCE,
+        getFeatures: async () => getBuildingFeatures(liveMap),
+      }).addTo(liveMap);
+    })();
+
+    return () => {
+      cancelled = true;
+      if (shadeRef.current) {
+        try { shadeRef.current.remove(); } catch { /* already gone */ }
+        shadeRef.current = null;
+      }
+    };
+    // shadowDate is applied via the effect below; don't recreate on every tick.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shadowOn, mapLoaded]);
+
+  // Push date changes to the live overlay.
+  useEffect(() => {
+    if (shadeRef.current) {
+      try { shadeRef.current.setDate(shadowDate); } catch { /* not ready */ }
+    }
+  }, [shadowDate]);
+
+  // 3D tilt for building shadows.
+  useEffect(() => {
+    const map = mapRef.current?.getMap();
+    if (!map || !mapLoaded) return;
+    map.easeTo({ pitch: tilt ? 55 : 0, duration: 500 });
+  }, [tilt, mapLoaded]);
+
   return (
     <div className="relative w-full h-full">
       <Map
         ref={mapRef}
         mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
         initialViewState={{
-          longitude: -118.2437,
-          latitude: 34.0522,
-          zoom: 10,
+          longitude: focus ? focus.lng : DEFAULT_CENTER.lng,
+          latitude: focus ? focus.lat : DEFAULT_CENTER.lat,
+          zoom: focus ? focus.zoom ?? 16 : 10,
         }}
         style={{ width: '100%', height: '100%' }}
-        mapStyle="mapbox://styles/mapbox/dark-v11"
+        mapStyle="mapbox://styles/mapbox/standard"
         onClick={handleMapClick}
+        onLoad={() => setMapLoaded(true)}
+        onMoveEnd={(e) => setCenter({ lat: e.viewState.latitude, lng: e.viewState.longitude })}
         cursor={addingMode ? 'crosshair' : 'auto'}
       >
         <NavigationControl position="top-right" />
-        <GeolocateControl
-          position="top-right"
-          trackUserLocation
-          showUserHeading
-        />
+        {!compact && (
+          <GeolocateControl position="top-right" trackUserLocation showUserHeading />
+        )}
 
         {/* Saved spots */}
         {spots.map(spot => (
@@ -82,6 +155,15 @@ export function SpotMap({ spots, onAddSpot }: Props) {
             </button>
           </Marker>
         ))}
+
+        {/* Focus marker (compact spot embed) */}
+        {compact && focus && (
+          <Marker longitude={focus.lng} latitude={focus.lat} anchor="bottom">
+            <div className="w-8 h-8 rounded-full bg-[var(--accent)] border-2 border-[var(--accent)] flex items-center justify-center">
+              <MapPin className="w-4 h-4" strokeWidth={2} color="black" />
+            </div>
+          </Marker>
+        )}
 
         {/* New spot marker */}
         {newMarker && (
@@ -134,41 +216,58 @@ export function SpotMap({ spots, onAddSpot }: Props) {
       </Map>
 
       {/* Add mode controls */}
-      <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
-        {!addingMode ? (
-          <button
-            onClick={() => setAddingMode(true)}
-            className="bg-[var(--accent)] text-black text-sm font-medium px-3 py-2 rounded-lg shadow-lg hover:bg-[var(--accent-dim)] transition-colors"
-          >
-            + Add spot
-          </button>
-        ) : (
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3 shadow-xl max-w-[200px]">
-            <p className="text-xs text-[var(--muted)] mb-2">
-              {newMarker ? 'Confirm location?' : 'Tap the map to place a spot'}
-            </p>
-            <div className="flex gap-2">
-              {newMarker && (
+      {!compact && onAddSpot && (
+        <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
+          {!addingMode ? (
+            <button
+              onClick={() => setAddingMode(true)}
+              className="bg-[var(--accent)] text-black text-sm font-medium px-3 py-2 rounded-lg shadow-lg hover:bg-[var(--accent-dim)] transition-colors"
+            >
+              + Add spot
+            </button>
+          ) : (
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3 shadow-xl max-w-[200px]">
+              <p className="text-xs text-[var(--muted)] mb-2">
+                {newMarker ? 'Confirm location?' : 'Tap the map to place a spot'}
+              </p>
+              <div className="flex gap-2">
+                {newMarker && (
+                  <button
+                    onClick={confirmAdd}
+                    className="flex-1 bg-emerald-600 text-white text-xs font-medium py-1.5 rounded-lg hover:bg-emerald-500 transition-colors"
+                  >
+                    Confirm
+                  </button>
+                )}
                 <button
-                  onClick={confirmAdd}
-                  className="flex-1 bg-emerald-600 text-white text-xs font-medium py-1.5 rounded-lg hover:bg-emerald-500 transition-colors"
+                  onClick={() => setAddingMode(false)}
+                  className="flex-1 bg-[var(--border)] text-[var(--foreground)] text-xs font-medium py-1.5 rounded-lg hover:bg-[var(--card-hover)] transition-colors"
                 >
-                  Confirm
+                  Cancel
                 </button>
-              )}
-              <button
-                onClick={() => setAddingMode(false)}
-                className="flex-1 bg-[var(--border)] text-[var(--foreground)] text-xs font-medium py-1.5 rounded-lg hover:bg-[var(--card-hover)] transition-colors"
-              >
-                Cancel
-              </button>
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
+
+      {/* Shadow / sun controls */}
+      {shadow && (
+        <ShadowControls
+          available={shadowsAvailable()}
+          enabled={shadowOn}
+          onToggle={setShadowOn}
+          date={shadowDate}
+          onDateChange={setShadowDate}
+          lat={center.lat}
+          lng={center.lng}
+          tilt={tilt}
+          onTiltToggle={setTilt}
+        />
+      )}
 
       {/* Spot count */}
-      {spots.length > 0 && (
+      {!compact && spots.length > 0 && !shadowOn && (
         <div className="absolute bottom-4 left-4 bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-1.5 text-xs text-[var(--muted)] z-10">
           {spots.length} saved spot{spots.length !== 1 ? 's' : ''}
         </div>

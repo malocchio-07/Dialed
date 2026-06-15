@@ -34,7 +34,7 @@ export default function MapPage() {
           Loading map…
         </div>
       )}
-      <SpotMap spots={spots} onAddSpot={handleAddSpot} />
+      <SpotMap spots={spots} onAddSpot={handleAddSpot} shadow />
     </div>
   );
 }

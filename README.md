@@ -15,8 +15,26 @@ straight from the free [Open-Meteo](https://open-meteo.com) API.
 - **Supabase** — auth, Postgres (with Row Level Security), and image storage
 - **Mapbox** via `react-map-gl` — the interactive map
 - **SunCalc** — sun position, golden/blue hour
+- **ShadeMap** (`mapbox-gl-shadow-simulator`) — simulated terrain + building shadows
 - **Open-Meteo** — cloud cover & forecast (no API key)
 - **Tailwind CSS** — mobile-first dark UI
+
+## Sun & shade simulation
+
+The map and each spot page have a **Sun & shade** mode: tap the button, then drag
+the time slider (or pick a date) to see where sunlight and shadow fall across
+terrain and buildings at that moment. It uses [ShadeMap](https://shademap.app),
+which needs a free, client-side API key:
+
+1. Request a key at <https://shademap.app/about/> (it's emailed to you).
+2. Add it as `NEXT_PUBLIC_SHADEMAP_KEY` — in `.env.local` for local dev, and as a
+   GitHub repo secret for the live site (see below).
+
+Without a key the app works normally; the "Sun & shade" button is just disabled.
+
+> The time slider uses your device's local timezone, not the spot's. For a single
+> user shooting near home this is fine; cross-timezone planning would need a
+> timezone lookup (not implemented).
 
 ## Pages
 
@@ -61,6 +79,7 @@ data.
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `NEXT_PUBLIC_MAPBOX_TOKEN`
+   - `NEXT_PUBLIC_SHADEMAP_KEY` (optional — enables the Sun & shade feature)
 3. Push to `main`. The workflow in
    [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) builds the
    static site and publishes it. The base path (e.g. `/Dialed`) is injected

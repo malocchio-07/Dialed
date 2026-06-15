@@ -13,6 +13,7 @@ import { createClient } from '@/lib/supabase/client';
 import type { PhotoSpot, Photo, ShootPlan } from '@/types';
 import { SunWidget } from './SunWidget';
 import { PlanModal } from './PlanModal';
+import { SpotMap } from '@/components/map/SpotMap';
 
 type Props = {
   spot: PhotoSpot;
@@ -85,6 +86,19 @@ export function SpotDetail({ spot, photos, plans, onReload }: Props) {
 
           {/* Today's sun times */}
           <SunWidget sunTimes={sunTimes} />
+
+          {/* Sun & shade simulation */}
+          <div>
+            <p className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wider mb-2">Sun &amp; shade</p>
+            <div className="h-72 rounded-xl overflow-hidden border border-[var(--border)]">
+              <SpotMap
+                spots={[]}
+                shadow
+                compact
+                focus={{ lat: spot.latitude, lng: spot.longitude, zoom: 16 }}
+              />
+            </div>
+          </div>
 
           {/* Notes sections */}
           {spot.notes && <NoteSection title="Notes" content={spot.notes} />}
