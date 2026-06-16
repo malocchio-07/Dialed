@@ -18,6 +18,7 @@ free [Open-Meteo](https://open-meteo.com) API.
 - **SunCalc** — sun position, golden/blue hour
 - **ShadeMap** (`mapbox-gl-shadow-simulator`) — simulated terrain + building shadows
 - **Open-Meteo** — cloud cover & forecast (no API key)
+- **OpenWeatherMap** — live cloud cover map tiles
 - **Tailwind CSS** — mobile-first dark UI
 
 ## Sun & shade simulation
@@ -36,6 +37,17 @@ Without a key the app works normally; the "Sun & shade" button is just disabled.
 > The time slider uses your device's local timezone, not the spot's. For a single
 > user shooting near home this is fine; cross-timezone planning would need a
 > timezone lookup (not implemented).
+
+## Live cloud cover
+
+The cloud button (bottom-right on the map) overlays real-time cloud cover from
+OpenWeatherMap. It needs a free key:
+
+1. Sign up at <https://openweathermap.org/api> and grab a free API key.
+2. Add it as `NEXT_PUBLIC_OPENWEATHER_KEY` — in `.env.local` for local dev, and
+   as a Cloudflare environment variable for the live site (see below).
+
+Without a key the app works normally; the clouds button is just disabled.
 
 ## Pages
 
@@ -96,7 +108,8 @@ repo includes `wrangler.jsonc` and `.node-version` so either path works.
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `NEXT_PUBLIC_MAPBOX_TOKEN`
-   - `NEXT_PUBLIC_SHADEMAP_KEY` (optional — enables the Sun & shade feature)
+   - `NEXT_PUBLIC_SHADEMAP_KEY` (optional — enables the 3D terrain/building shadow sim)
+   - `NEXT_PUBLIC_OPENWEATHER_KEY` (optional — enables the live cloud cover layer)
 5. Save and deploy. Every push to the connected branch triggers a new build
    automatically.
 

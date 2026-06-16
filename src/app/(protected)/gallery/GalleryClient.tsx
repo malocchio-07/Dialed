@@ -6,8 +6,15 @@ import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { STATUS_CONFIG } from '@/lib/utils';
+import { extractPhotoMeta } from '@/lib/exif';
+import { findClosestSpot } from '@/lib/geo';
 import type { Photo, PhotoStatus } from '@/types';
 import { Upload, X, ChevronDown } from 'lucide-react';
+
+// A photo's GPS rarely lands exactly on a spot's pin (parking, sidewalk, a
+// block over) but should still be close; anything farther is probably a
+// different, unsaved location, so leave spot_id for the user to set by hand.
+const AUTO_TAG_MAX_DISTANCE_KM = 2;
 
 const STATUS_FILTERS: { value: PhotoStatus | 'all'; label: string }[] = [
   { value: 'all', label: 'All' },
@@ -18,7 +25,7 @@ const STATUS_FILTERS: { value: PhotoStatus | 'all'; label: string }[] = [
   { value: 'portfolio', label: 'Portfolio' },
 ];
 
-type Spot = { id: string; name: string };
+type Spot = { id: string; name: string; latitude: number; longitude: number };
 
 type Props = {
   photos: Photo[];
@@ -55,16 +62,26 @@ export function GalleryClient({ photos: initial, spots, initialSpotId = '' }: Pr
         const ext = file.name.split('.').pop();
         const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
 
-        const { error: uploadError } = await supabase.storage.from('photos').upload(path, file);
+        const [{ error: uploadError }, meta] = await Promise.all([
+          supabase.storage.from('photos').upload(path, file),
+          extractPhotoMeta(file),
+        ]);
         if (uploadError) continue;
 
         const { data: urlData } = supabase.storage.from('photos').getPublicUrl(path);
 
+        // An explicit spot filter wins; otherwise fall back to the closest
+        // saved spot to the photo's EXIF GPS, if it's close enough to trust.
+        const closest = meta.lat != null && meta.lng != null ? findClosestSpot(spots, meta.lat, meta.lng) : null;
+        const autoSpotId = closest && closest.distanceKm <= AUTO_TAG_MAX_DISTANCE_KM ? closest.spot.id : null;
+
         const { data: photo } = await supabase.from('photos').insert({
           user_id: user.id,
-          spot_id: selectedSpot || null,
+          spot_id: selectedSpot || autoSpotId,
           image_url: urlData.publicUrl,
           storage_path: path,
+          date_taken: meta.dateTaken,
+          camera_used: meta.camera,
           status: 'unedited',
         }).select().single();
 
@@ -204,7 +221,10 @@ export function GalleryClient({ photos: initial, spots, initialSpotId = '' }: Pr
               {selected.photo_spots && (
                 <p className="text-xs text-[var(--muted)]">{selected.photo_spots.name}</p>
               )}
-              <p className="text-xs text-[var(--muted)]">{new Date(selected.created_at).toLocaleDateString()}</p>
+              <p className="text-xs text-[var(--muted)]">
+                {new Date(selected.date_taken ?? selected.created_at).toLocaleDateString()}
+                {selected.camera_used && ` · ${selected.camera_used}`}
+              </p>
             </div>
             <Button variant="danger" size="sm" onClick={() => deletePhoto(selected)}>
               Delete

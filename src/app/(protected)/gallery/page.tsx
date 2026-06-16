@@ -4,9 +4,9 @@ import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { GalleryClient } from './GalleryClient';
-import type { Photo } from '@/types';
+import type { Photo, PhotoSpot } from '@/types';
 
-type Spot = { id: string; name: string };
+type Spot = Pick<PhotoSpot, 'id' | 'name' | 'latitude' | 'longitude'>;
 
 function GalleryInner() {
   const initialSpotId = useSearchParams().get('spot') ?? '';
@@ -21,7 +21,7 @@ function GalleryInner() {
         .from('photos')
         .select('*, photo_spots(id, name)')
         .order('created_at', { ascending: false }),
-      supabase.from('photo_spots').select('id, name').order('name'),
+      supabase.from('photo_spots').select('id, name, latitude, longitude').order('name'),
     ]).then(([photosRes, spotsRes]) => {
       setPhotos((photosRes.data as Photo[]) ?? []);
       setSpots((spotsRes.data as Spot[]) ?? []);

@@ -5,7 +5,7 @@ import Map, { Marker, Popup, NavigationControl, GeolocateControl } from 'react-m
 import type { MapRef } from 'react-map-gl/mapbox';
 import type ShadeMap from 'mapbox-gl-shadow-simulator';
 import type { PhotoSpot } from '@/types';
-import { MapPin, X } from 'lucide-react';
+import { MapPin, X, Cloud } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   SHADEMAP_KEY,
@@ -14,6 +14,7 @@ import {
   ensureBuildingSource,
   getBuildingFeatures,
 } from '@/lib/shademap';
+import { cloudsAvailable, addCloudLayer, removeCloudLayer } from '@/lib/clouds';
 import { getSunPosition, getLightPhase, LIGHT_PHASE_TINT } from '@/lib/sun';
 import { ShadowControls } from './ShadowControls';
 import Link from 'next/link';
@@ -50,6 +51,7 @@ export function SpotMap({ spots, onAddSpot, shadow = false, focus, compact = fal
   const [panelOpen, setPanelOpen] = useState(false);
   // Heavy: actually renders ShadeMap's terrain/building shadow simulation.
   const [shadowSimOn, setShadowSimOn] = useState(false);
+  const [cloudsOn, setCloudsOn] = useState(false);
   const [shadowDate, setShadowDate] = useState(() => new Date());
   const [tilt, setTilt] = useState(false);
   const [center, setCenter] = useState(focus ? { lat: focus.lat, lng: focus.lng } : DEFAULT_CENTER);
@@ -122,6 +124,17 @@ export function SpotMap({ spots, onAddSpot, shadow = false, focus, compact = fal
     if (!map || !mapLoaded) return;
     map.easeTo({ pitch: tilt ? 55 : 0, duration: 500 });
   }, [tilt, mapLoaded]);
+
+  // Live cloud cover overlay (independent of the sun/shadow simulation).
+  useEffect(() => {
+    const map = mapRef.current?.getMap();
+    if (!map || !mapLoaded) return;
+    if (cloudsOn && cloudsAvailable()) {
+      addCloudLayer(map);
+    } else {
+      removeCloudLayer(map);
+    }
+  }, [cloudsOn, mapLoaded]);
 
   const sunAltitudeDeg = (getSunPosition(shadowDate, center.lat, center.lng).altitude * 180) / Math.PI;
   const lightTint = LIGHT_PHASE_TINT[getLightPhase(sunAltitudeDeg)];
@@ -297,6 +310,24 @@ export function SpotMap({ spots, onAddSpot, shadow = false, focus, compact = fal
         <div className="absolute bottom-4 left-4 bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-1.5 text-xs text-[var(--muted)] z-10">
           {spots.length} saved spot{spots.length !== 1 ? 's' : ''}
         </div>
+      )}
+
+      {/* Live cloud cover overlay toggle */}
+      {!panelOpen && (
+        <button
+          onClick={() => cloudsAvailable() && setCloudsOn(v => !v)}
+          disabled={!cloudsAvailable()}
+          title={cloudsAvailable() ? 'Toggle live cloud cover' : 'Add an OpenWeatherMap key to enable the cloud layer'}
+          className={cn(
+            'absolute bottom-4 right-4 z-10 flex items-center justify-center w-9 h-9 rounded-full shadow-lg transition-colors',
+            cloudsOn
+              ? 'bg-[var(--accent)] text-black'
+              : 'bg-[var(--card)] border border-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)]',
+            !cloudsAvailable() && 'opacity-50 cursor-not-allowed'
+          )}
+        >
+          <Cloud className="w-4 h-4" />
+        </button>
       )}
     </div>
   );
