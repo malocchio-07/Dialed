@@ -32,6 +32,9 @@ type Props = {
 };
 
 const DEFAULT_CENTER = { lat: 34.0522, lng: -118.2437 };
+// Below this zoom, ShadeMap would have to process terrain/building shadows
+// across too wide an area for mobile devices to handle reliably.
+const MIN_SHADOW_ZOOM = 14;
 
 export function SpotMap({ spots, onAddSpot, shadow = false, focus, compact = false }: Props) {
   const mapRef = useRef<MapRef>(null);
@@ -74,6 +77,12 @@ export function SpotMap({ spots, onAddSpot, shadow = false, focus, compact = fal
       const { default: ShadeMapCtor } = await import('mapbox-gl-shadow-simulator');
       if (cancelled || !mapRef.current) return;
       const liveMap = mapRef.current.getMap();
+      // Shadows over a city-wide view (low zoom) make ShadeMap fetch and
+      // process terrain/building data across a huge area at once, which can
+      // exceed mobile Safari's per-tab memory limit and crash the page.
+      if (liveMap.getZoom() < MIN_SHADOW_ZOOM) {
+        liveMap.jumpTo({ zoom: MIN_SHADOW_ZOOM });
+      }
       ensureBuildingSource(liveMap);
       shadeRef.current = new ShadeMapCtor({
         apiKey: SHADEMAP_KEY,
