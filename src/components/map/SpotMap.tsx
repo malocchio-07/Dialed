@@ -46,7 +46,10 @@ export function SpotMap({ spots, onAddSpot, shadow = false, focus, compact = fal
   const [newMarker, setNewMarker] = useState<{ lat: number; lng: number } | null>(null);
 
   const [mapLoaded, setMapLoaded] = useState(false);
-  const [shadowOn, setShadowOn] = useState(false);
+  // Lightweight: opens the sun panel and drives the golden/blue hour tint + sunset forecast.
+  const [panelOpen, setPanelOpen] = useState(false);
+  // Heavy: actually renders ShadeMap's terrain/building shadow simulation.
+  const [shadowSimOn, setShadowSimOn] = useState(false);
   const [shadowDate, setShadowDate] = useState(() => new Date());
   const [tilt, setTilt] = useState(false);
   const [center, setCenter] = useState(focus ? { lat: focus.lat, lng: focus.lng } : DEFAULT_CENTER);
@@ -68,10 +71,10 @@ export function SpotMap({ spots, onAddSpot, shadow = false, focus, compact = fal
     if (!addingMode) setNewMarker(null);
   }, [addingMode]);
 
-  // Create / tear down the ShadeMap overlay when shadow mode toggles.
+  // Create / tear down the ShadeMap overlay when 3D shadow sim toggles.
   useEffect(() => {
     const map = mapRef.current?.getMap();
-    if (!shadowOn || !mapLoaded || !map || !shadowsAvailable()) return;
+    if (!shadowSimOn || !mapLoaded || !map || !shadowsAvailable()) return;
 
     let cancelled = false;
     (async () => {
@@ -104,7 +107,7 @@ export function SpotMap({ spots, onAddSpot, shadow = false, focus, compact = fal
     };
     // shadowDate is applied via the effect below; don't recreate on every tick.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shadowOn, mapLoaded]);
+  }, [shadowSimOn, mapLoaded]);
 
   // Push date changes to the live overlay.
   useEffect(() => {
@@ -229,7 +232,7 @@ export function SpotMap({ spots, onAddSpot, shadow = false, focus, compact = fal
       </Map>
 
       {/* Golden/blue hour color wash, driven by the scrubbable time */}
-      {shadowOn && (
+      {panelOpen && (
         <div
           className="absolute inset-0 z-[1] pointer-events-none transition-colors duration-700"
           style={{ backgroundColor: lightTint }}
@@ -276,8 +279,10 @@ export function SpotMap({ spots, onAddSpot, shadow = false, focus, compact = fal
       {shadow && (
         <ShadowControls
           available={shadowsAvailable()}
-          enabled={shadowOn}
-          onToggle={setShadowOn}
+          enabled={panelOpen}
+          onToggle={setPanelOpen}
+          simEnabled={shadowSimOn}
+          onSimToggle={setShadowSimOn}
           date={shadowDate}
           onDateChange={setShadowDate}
           lat={center.lat}
@@ -288,7 +293,7 @@ export function SpotMap({ spots, onAddSpot, shadow = false, focus, compact = fal
       )}
 
       {/* Spot count */}
-      {!compact && spots.length > 0 && !shadowOn && (
+      {!compact && spots.length > 0 && !panelOpen && (
         <div className="absolute bottom-4 left-4 bg-[var(--card)] border border-[var(--border)] rounded-lg px-3 py-1.5 text-xs text-[var(--muted)] z-10">
           {spots.length} saved spot{spots.length !== 1 ? 's' : ''}
         </div>

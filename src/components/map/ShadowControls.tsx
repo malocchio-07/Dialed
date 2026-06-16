@@ -1,13 +1,21 @@
 'use client';
 
-import { Sun, X, Mountain, Moon } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Sun, X, Mountain, Moon, Box } from 'lucide-react';
 import { getSunTimes, getSunPosition, formatTime, getLightPhase, LIGHT_PHASE_LABEL } from '@/lib/sun';
+import { getWeather, findHourly, predictSunsetColor } from '@/lib/weather';
+import type { WeatherData } from '@/types';
 import { cn } from '@/lib/utils';
 
 type Props = {
+  /** Whether a ShadeMap key is configured — gates only the heavy 3D shadow sim. */
   available: boolean;
+  /** Whether the sun/light panel is open (drives the tint + sunset forecast). */
   enabled: boolean;
   onToggle: (value: boolean) => void;
+  /** Whether the heavy ShadeMap terrain/building shadow sim is on. */
+  simEnabled: boolean;
+  onSimToggle: (value: boolean) => void;
   date: Date;
   onDateChange: (date: Date) => void;
   lat: number;
@@ -28,6 +36,8 @@ export function ShadowControls({
   available,
   enabled,
   onToggle,
+  simEnabled,
+  onSimToggle,
   date,
   onDateChange,
   lat,
@@ -35,30 +45,38 @@ export function ShadowControls({
   tilt,
   onTiltToggle,
 }: Props) {
-  // Collapsed pill
-  if (!enabled) {
-    return (
-      <button
-        onClick={() => available && onToggle(true)}
-        disabled={!available}
-        title={available ? 'Show sun & shade' : 'Add a ShadeMap key to enable shadows'}
-        className={cn(
-          'absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium shadow-lg transition-colors',
-          available
-            ? 'bg-[var(--accent)] text-black hover:bg-[var(--accent-dim)]'
-            : 'bg-[var(--card)] border border-[var(--border)] text-[var(--muted)] cursor-not-allowed'
-        )}
-      >
-        <Sun className="w-4 h-4" strokeWidth={2} />
-        {available ? 'Sun & shade' : 'Shadows (needs key)'}
-      </button>
-    );
-  }
+  const dateInputValue = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+  const [weather, setWeather] = useState<WeatherData | null>(null);
+
+  useEffect(() => {
+    if (!enabled) return;
+    let cancelled = false;
+    getWeather(lat, lng, dateInputValue).then(w => { if (!cancelled) setWeather(w); });
+    return () => { cancelled = true; };
+  }, [enabled, lat, lng, dateInputValue]);
 
   const sun = getSunPosition(date, lat, lng);
   const altDeg = (sun.altitude * 180) / Math.PI;
   const azDeg = ((sun.azimuth * 180) / Math.PI + 180 + 360) % 360;
   const times = getSunTimes(date, lat, lng);
+
+  const sunsetHour = weather ? findHourly(weather, times.sunset) : null;
+  const sunsetColor = sunsetHour ? predictSunsetColor(sunsetHour) : null;
+
+  // Collapsed pill
+  if (!enabled) {
+    return (
+      <button
+        onClick={() => onToggle(true)}
+        title="Sun position, golden/blue hour tint, and sunset forecast"
+        className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium shadow-lg transition-colors bg-[var(--accent)] text-black hover:bg-[var(--accent-dim)]"
+      >
+        <Sun className="w-4 h-4" strokeWidth={2} />
+        Sun & light
+      </button>
+    );
+  }
 
   const sunriseMin = minutesOfDay(times.sunrise);
   const sunsetMin = minutesOfDay(times.sunset);
@@ -94,8 +112,6 @@ export function ShadowControls({
     #0a0a1f ${pct(sunsetMin + 40)}%,
     #0a0a1f 100%)`;
 
-  const dateInputValue = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-
   return (
     <div className="absolute bottom-4 left-3 right-3 z-10 mx-auto max-w-md rounded-2xl bg-[var(--card)] border border-[var(--border)] shadow-xl p-4">
       {/* Header */}
@@ -110,6 +126,18 @@ export function ShadowControls({
           <span className={cn('text-xs font-medium', phase.textColor)}>{phase.label}</span>
         </div>
         <div className="flex items-center gap-1">
+          <button
+            onClick={() => available && onSimToggle(!simEnabled)}
+            disabled={!available}
+            title={available ? 'Toggle 3D terrain & building shadows' : 'Add a ShadeMap key to enable 3D shadows'}
+            className={cn(
+              'flex items-center justify-center w-7 h-7 rounded-lg transition-colors',
+              !available && 'opacity-40 cursor-not-allowed',
+              simEnabled ? 'bg-[var(--accent)] text-black' : 'text-[var(--muted)] hover:bg-[var(--card-hover)]'
+            )}
+          >
+            <Box className="w-4 h-4" />
+          </button>
           <button
             onClick={() => onTiltToggle(!tilt)}
             title="Toggle 3D tilt"
@@ -169,6 +197,20 @@ export function ShadowControls({
           {altDeg >= 0 ? `${Math.round(altDeg)}° high · ${Math.round(azDeg)}°` : 'Below horizon'}
         </span>
       </div>
+
+      {/* Sunset color forecast, for this map location & date */}
+      {sunsetColor && (
+        <div className="mt-3 flex items-center gap-2 rounded-lg border border-[var(--border)] p-2">
+          <div
+            className="w-7 h-7 rounded shrink-0 border border-[var(--border)]"
+            style={{ background: sunsetColor.gradient }}
+          />
+          <p className="text-xs leading-tight">
+            <span className="font-medium">{sunsetColor.label}</span>
+            <span className="text-[var(--muted)]"> — {sunsetColor.description}</span>
+          </p>
+        </div>
+      )}
 
       <input
         type="date"
