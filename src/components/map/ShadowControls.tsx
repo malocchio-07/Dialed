@@ -1,7 +1,7 @@
 'use client';
 
 import { Sun, X, Mountain, Moon } from 'lucide-react';
-import { getSunTimes, getSunPosition, formatTime } from '@/lib/sun';
+import { getSunTimes, getSunPosition, formatTime, getLightPhase, LIGHT_PHASE_LABEL } from '@/lib/sun';
 import { cn } from '@/lib/utils';
 
 type Props = {
@@ -64,11 +64,7 @@ export function ShadowControls({
   const sunsetMin = minutesOfDay(times.sunset);
   const value = minutesOfDay(date);
 
-  let phase: { label: string; color: string };
-  if (altDeg < -6) phase = { label: 'Night', color: 'text-slate-400' };
-  else if (altDeg < 0) phase = { label: 'Twilight / blue hour', color: 'text-blue-400' };
-  else if (altDeg < 6) phase = { label: 'Golden hour', color: 'text-yellow-400' };
-  else phase = { label: 'Daytime', color: 'text-emerald-400' };
+  const phase = LIGHT_PHASE_LABEL[getLightPhase(altDeg)];
 
   function setMinutes(min: number) {
     const next = new Date(date);
@@ -111,7 +107,7 @@ export function ShadowControls({
             <Sun className="w-4 h-4 text-yellow-400" />
           )}
           <span className="text-sm font-semibold">{formatTime(date)}</span>
-          <span className={cn('text-xs font-medium', phase.color)}>{phase.label}</span>
+          <span className={cn('text-xs font-medium', phase.textColor)}>{phase.label}</span>
         </div>
         <div className="flex items-center gap-1">
           <button

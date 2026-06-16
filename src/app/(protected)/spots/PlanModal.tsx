@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { getWeather } from '@/lib/weather';
+import { getWeather, findHourly, predictSunsetColor } from '@/lib/weather';
 import { getSunTimes, getBestWindow, getSuggestedSettings, formatTime } from '@/lib/sun';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -72,6 +72,9 @@ export function PlanModal({ spot, onClose, onSaved }: Props) {
     }
   }
 
+  const sunsetHour = preview?.weather ? findHourly(preview.weather, preview.sunTimes.sunset) : null;
+  const sunsetColor = sunsetHour ? predictSunsetColor(sunsetHour) : null;
+
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
@@ -119,6 +122,18 @@ export function PlanModal({ spot, onClose, onSaved }: Props) {
                 <div className="flex justify-between items-center mt-1">
                   <span className="text-[var(--muted)] text-xs">High temp</span>
                   <span className="text-xs">{Math.round(preview.weather.temperature)}°C</span>
+                </div>
+              </div>
+            )}
+            {sunsetColor && (
+              <div className="pt-2 border-t border-[var(--border)] flex items-center gap-3">
+                <div
+                  className="w-10 h-10 rounded-lg shrink-0 border border-[var(--border)]"
+                  style={{ background: sunsetColor.gradient }}
+                />
+                <div>
+                  <p className="text-xs font-medium">{sunsetColor.label}</p>
+                  <p className="text-xs text-[var(--muted)]">{sunsetColor.description}</p>
                 </div>
               </div>
             )}

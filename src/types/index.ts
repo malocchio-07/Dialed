@@ -71,8 +71,19 @@ export type WeatherData = {
 export type HourlyWeather = {
   time: string;
   cloud_cover: number;
+  cloud_cover_low: number;
+  cloud_cover_mid: number;
+  cloud_cover_high: number;
+  relative_humidity: number;
   temperature: number;
   weather_code: number;
+};
+
+export type SunsetColorPrediction = {
+  score: number;
+  label: string;
+  description: string;
+  gradient: string;
 };
 
 export type SunTimes = {

@@ -14,6 +14,7 @@ import {
   ensureBuildingSource,
   getBuildingFeatures,
 } from '@/lib/shademap';
+import { getSunPosition, getLightPhase, LIGHT_PHASE_TINT } from '@/lib/sun';
 import { ShadowControls } from './ShadowControls';
 import Link from 'next/link';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -119,6 +120,9 @@ export function SpotMap({ spots, onAddSpot, shadow = false, focus, compact = fal
     map.easeTo({ pitch: tilt ? 55 : 0, duration: 500 });
   }, [tilt, mapLoaded]);
 
+  const sunAltitudeDeg = (getSunPosition(shadowDate, center.lat, center.lng).altitude * 180) / Math.PI;
+  const lightTint = LIGHT_PHASE_TINT[getLightPhase(sunAltitudeDeg)];
+
   return (
     <div className="relative w-full h-full">
       <Map
@@ -223,6 +227,14 @@ export function SpotMap({ spots, onAddSpot, shadow = false, focus, compact = fal
           </Popup>
         )}
       </Map>
+
+      {/* Golden/blue hour color wash, driven by the scrubbable time */}
+      {shadowOn && (
+        <div
+          className="absolute inset-0 z-[1] pointer-events-none transition-colors duration-700"
+          style={{ backgroundColor: lightTint }}
+        />
+      )}
 
       {/* Add mode controls */}
       {!compact && onAddSpot && (

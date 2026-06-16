@@ -31,6 +31,31 @@ export function getSunPosition(date: Date, lat: number, lng: number) {
   return SunCalc.getPosition(date, lat, lng);
 }
 
+export type LightPhase = 'night' | 'blueHour' | 'goldenHour' | 'day';
+
+/** Sun altitude (degrees) thresholds shared by the time-slider readout and the map tint. */
+export function getLightPhase(altitudeDeg: number): LightPhase {
+  if (altitudeDeg < -6) return 'night';
+  if (altitudeDeg < 0) return 'blueHour';
+  if (altitudeDeg < 6) return 'goldenHour';
+  return 'day';
+}
+
+export const LIGHT_PHASE_LABEL: Record<LightPhase, { label: string; textColor: string }> = {
+  night: { label: 'Night', textColor: 'text-slate-400' },
+  blueHour: { label: 'Twilight / blue hour', textColor: 'text-blue-400' },
+  goldenHour: { label: 'Golden hour', textColor: 'text-yellow-400' },
+  day: { label: 'Daytime', textColor: 'text-emerald-400' },
+};
+
+/** Color wash simulating each phase's ambient light, overlaid on the map. */
+export const LIGHT_PHASE_TINT: Record<LightPhase, string> = {
+  night: 'rgba(8, 10, 30, 0.40)',
+  blueHour: 'rgba(30, 58, 138, 0.28)',
+  goldenHour: 'rgba(255, 140, 60, 0.20)',
+  day: 'rgba(0, 0, 0, 0)',
+};
+
 export function formatTime(date: Date): string {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
