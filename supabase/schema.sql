@@ -2,7 +2,7 @@
 create extension if not exists "uuid-ossp";
 
 -- Photo Spots
-create table photo_spots (
+create table if not exists photo_spots (
   id uuid primary key default uuid_generate_v4(),
   user_id uuid references auth.users(id) on delete cascade not null,
   name text not null,
@@ -19,7 +19,7 @@ create table photo_spots (
 );
 
 -- Shoot Plans
-create table shoot_plans (
+create table if not exists shoot_plans (
   id uuid primary key default uuid_generate_v4(),
   user_id uuid references auth.users(id) on delete cascade not null,
   spot_id uuid references photo_spots(id) on delete cascade not null,
@@ -39,7 +39,7 @@ create table shoot_plans (
 );
 
 -- Photos
-create table photos (
+create table if not exists photos (
   id uuid primary key default uuid_generate_v4(),
   user_id uuid references auth.users(id) on delete cascade not null,
   spot_id uuid references photo_spots(id) on delete set null,
@@ -58,16 +58,19 @@ alter table photo_spots enable row level security;
 alter table shoot_plans enable row level security;
 alter table photos enable row level security;
 
+drop policy if exists "Users manage own spots" on photo_spots;
 create policy "Users manage own spots"
   on photo_spots for all
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
+drop policy if exists "Users manage own plans" on shoot_plans;
 create policy "Users manage own plans"
   on shoot_plans for all
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
+drop policy if exists "Users manage own photos" on photos;
 create policy "Users manage own photos"
   on photos for all
   using (auth.uid() = user_id)
@@ -78,14 +81,17 @@ insert into storage.buckets (id, name, public)
 values ('photos', 'photos', false)
 on conflict do nothing;
 
+drop policy if exists "Users upload own photos" on storage.objects;
 create policy "Users upload own photos"
   on storage.objects for insert
   with check (bucket_id = 'photos' and auth.uid()::text = (storage.foldername(name))[1]);
 
+drop policy if exists "Users view own photos" on storage.objects;
 create policy "Users view own photos"
   on storage.objects for select
   using (bucket_id = 'photos' and auth.uid()::text = (storage.foldername(name))[1]);
 
+drop policy if exists "Users delete own photos" on storage.objects;
 create policy "Users delete own photos"
   on storage.objects for delete
   using (bucket_id = 'photos' and auth.uid()::text = (storage.foldername(name))[1]);
@@ -99,6 +105,7 @@ begin
 end;
 $$ language plpgsql;
 
+drop trigger if exists photo_spots_updated_at on photo_spots;
 create trigger photo_spots_updated_at
   before update on photo_spots
   for each row execute function update_updated_at();
