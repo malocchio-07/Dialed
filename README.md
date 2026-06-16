@@ -70,16 +70,22 @@ It creates the `photo_spots`, `shoot_plans`, and `photos` tables, the `photos`
 storage bucket, and Row Level Security policies so each user only sees their own
 data.
 
-## Deploying to Cloudflare Pages
+## Deploying to Cloudflare
 
-Cloudflare Pages builds and hosts static sites for free, including from a
+Cloudflare builds and hosts static sites for free, including from a
 **private** GitHub repo — no paid plan required (unlike GitHub Pages, which
 only serves private repos on a paid GitHub plan).
 
-1. Sign up at [pages.cloudflare.com](https://pages.cloudflare.com) (free).
-2. **Workers & Pages → Create application → Pages → Connect to Git**, then
-   authorize Cloudflare's GitHub App for this repository (you can scope access
-   to just this one repo).
+Cloudflare has been unifying Pages into Workers, so depending on when you
+create the project it may come up either as a classic **Pages** project
+(served at `https://<project-name>.pages.dev`) or as a **Worker with static
+assets** (served at `https://<name>.<account-subdomain>.workers.dev`). This
+repo includes `wrangler.jsonc` and `.node-version` so either path works.
+
+1. Sign up at [dash.cloudflare.com](https://dash.cloudflare.com) (free).
+2. **Workers & Pages → Create application → Connect to Git**, then authorize
+   Cloudflare's GitHub App for this repository (you can scope access to just
+   this one repo).
 3. Build settings:
    - Framework preset: **Next.js (Static HTML Export)**
    - Build command: `npm run build`
@@ -94,8 +100,15 @@ only serves private repos on a paid GitHub plan).
 5. Save and deploy. Every push to the connected branch triggers a new build
    automatically.
 
-The site will be served at `https://<project-name>.pages.dev` (a custom domain
-can be attached later for free, too).
+> **If you land on a Worker project (`Settings → Build`) instead of classic
+> Pages:** confirm **Branch control → Production branch** is set to your
+> deploy branch (e.g. `main`), and that **Deploy command** is `npx wrangler
+> deploy`, not `npx wrangler versions upload`. The latter only uploads a new
+> Worker version without routing any traffic to it — the build will succeed
+> with no errors, but the site will be unreachable, because no deployment is
+> ever promoted to serve requests. Cloudflare uses the Deploy command only for
+> builds on the configured production branch; everything else uses the
+> Version command and stays an unpromoted preview.
 
 > **Note on a static deploy:** `NEXT_PUBLIC_*` values are baked into the public
 > JavaScript bundle at build time. That's expected here — the Supabase anon key
