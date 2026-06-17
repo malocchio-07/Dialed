@@ -2,12 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Map, Images, CalendarDays, Plus } from 'lucide-react';
+import { Map, Images, MapPin, CalendarDays } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const NAV_ITEMS = [
   { href: '/map',     label: 'Map',      icon: Map },
   { href: '/gallery', label: 'Gallery',  icon: Images },
+  { href: '/spots',   label: 'Spots',    icon: MapPin },
   { href: '/planner', label: 'Planner',  icon: CalendarDays },
 ];
 
@@ -24,7 +25,7 @@ export function Nav() {
               key={href}
               href={href}
               className={cn(
-                'flex flex-col items-center gap-1 px-4 py-1.5 rounded-lg transition-colors text-xs font-medium',
+                'flex flex-col items-center gap-1 px-3 py-1.5 rounded-lg transition-colors text-xs font-medium',
                 active
                   ? 'text-[var(--accent)]'
                   : 'text-[var(--muted)] hover:text-[var(--foreground)]'
@@ -35,15 +36,6 @@ export function Nav() {
             </Link>
           );
         })}
-        <Link
-          href="/spots/new"
-          className="flex flex-col items-center gap-1 px-4 py-1.5 text-xs font-medium text-black"
-        >
-          <span className="w-9 h-9 rounded-full bg-[var(--accent)] flex items-center justify-center -mt-5 shadow-lg shadow-yellow-900/40">
-            <Plus className="w-5 h-5" strokeWidth={2.5} />
-          </span>
-          <span className="text-[var(--muted)]">Add</span>
-        </Link>
       </div>
     </nav>
   );

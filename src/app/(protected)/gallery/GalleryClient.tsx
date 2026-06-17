@@ -89,7 +89,11 @@ export function GalleryClient({ photos: initial, spots, initialSpotId = '' }: Pr
           status: 'unedited',
         }).select().single();
 
-        if (photo) setPhotos(prev => [photo, ...prev]);
+        if (photo) {
+          const { data: signed } = await supabase.storage.from('photos').createSignedUrl(path, 3600);
+          const displayPhoto = signed?.signedUrl ? { ...photo, image_url: signed.signedUrl } : photo;
+          setPhotos(prev => [displayPhoto, ...prev]);
+        }
       }
     } finally {
       setUploading(false);

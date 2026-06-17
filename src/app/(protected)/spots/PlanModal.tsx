@@ -6,7 +6,7 @@ import { getWeather, findHourly, predictSunsetColor } from '@/lib/weather';
 import { getSunTimes, getBestWindow, getSuggestedSettings, formatTime } from '@/lib/sun';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { localDateStr } from '@/lib/utils';
+import { localDateStr, celsiusToFahrenheit } from '@/lib/utils';
 import type { PhotoSpot } from '@/types';
 import { X, Loader2 } from 'lucide-react';
 
@@ -77,7 +77,7 @@ export function PlanModal({ spot, onClose, onSaved }: Props) {
   const sunsetColor = sunsetHour ? predictSunsetColor(sunsetHour) : null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center pb-20 sm:pb-0">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-[var(--card)] border border-[var(--border)] rounded-t-2xl sm:rounded-2xl w-full max-w-md p-5 space-y-4 max-h-[90dvh] overflow-y-auto">
         <div className="flex items-center justify-between">
@@ -122,7 +122,7 @@ export function PlanModal({ spot, onClose, onSaved }: Props) {
                 </div>
                 <div className="flex justify-between items-center mt-1">
                   <span className="text-[var(--muted)] text-xs">High temp</span>
-                  <span className="text-xs">{Math.round(preview.weather.temperature)}°C</span>
+                  <span className="text-xs">{celsiusToFahrenheit(preview.weather.temperature)}°F</span>
                 </div>
               </div>
             )}
