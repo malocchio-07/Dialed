@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { STATUS_CONFIG } from '@/lib/utils';
-import { extractPhotoMeta } from '@/lib/exif';
+import { extractPhotoMeta, type PhotoMeta } from '@/lib/exif';
 import { findClosestSpot } from '@/lib/geo';
 import type { Photo, PhotoStatus } from '@/types';
 import { Upload, X, ChevronDown } from 'lucide-react';
@@ -15,6 +15,10 @@ import { Upload, X, ChevronDown } from 'lucide-react';
 // block over) but should still be close; anything farther is probably a
 // different, unsaved location, so leave spot_id for the user to set by hand.
 const AUTO_TAG_MAX_DISTANCE_KM = 2;
+const EMPTY_META: PhotoMeta = { lat: null, lng: null, dateTaken: null, camera: null };
+function withMetaTimeout(p: Promise<PhotoMeta>, ms = 5000): Promise<PhotoMeta> {
+  return Promise.race([p, new Promise<PhotoMeta>(resolve => setTimeout(() => resolve(EMPTY_META), ms))]);
+}
 
 const STATUS_FILTERS: { value: PhotoStatus | 'all'; label: string }[] = [
   { value: 'all', label: 'All' },
@@ -64,7 +68,7 @@ export function GalleryClient({ photos: initial, spots, initialSpotId = '' }: Pr
 
         const [{ error: uploadError }, meta] = await Promise.all([
           supabase.storage.from('photos').upload(path, file),
-          extractPhotoMeta(file),
+          withMetaTimeout(extractPhotoMeta(file)),
         ]);
         if (uploadError) continue;
 

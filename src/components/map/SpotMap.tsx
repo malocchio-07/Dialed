@@ -33,7 +33,7 @@ type Props = {
   compact?: boolean;
 };
 
-const DEFAULT_CENTER = { lat: 34.0522, lng: -118.2437 };
+const DEFAULT_CENTER = { lat: 40.7128, lng: -74.006 };
 // Below this zoom, ShadeMap would have to process terrain/building shadows
 // across too wide an area for mobile devices to handle reliably.
 const MIN_SHADOW_ZOOM = 14;
@@ -135,6 +135,23 @@ export function SpotMap({ spots, onAddSpot, shadow = false, focus, compact = fal
       removeCloudLayer(map);
     }
   }, [cloudsOn, mapLoaded]);
+
+  // Fly to user's current location on first load (skip for embedded focus views).
+  useEffect(() => {
+    if (!mapLoaded || focus) return;
+    navigator.geolocation?.getCurrentPosition(
+      pos => {
+        mapRef.current?.getMap()?.flyTo({
+          center: [pos.coords.longitude, pos.coords.latitude],
+          zoom: 12,
+          duration: 1500,
+        });
+      },
+      undefined,
+      { timeout: 8000 },
+    );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapLoaded]);
 
   const sunAltitudeDeg = (getSunPosition(shadowDate, center.lat, center.lng).altitude * 180) / Math.PI;
   const lightTint = LIGHT_PHASE_TINT[getLightPhase(sunAltitudeDeg)];
@@ -302,6 +319,9 @@ export function SpotMap({ spots, onAddSpot, shadow = false, focus, compact = fal
           lng={center.lng}
           tilt={tilt}
           onTiltToggle={setTilt}
+          cloudsOn={cloudsOn}
+          onCloudsToggle={setCloudsOn}
+          cloudsAvailable={cloudsAvailable()}
         />
       )}
 
@@ -312,8 +332,9 @@ export function SpotMap({ spots, onAddSpot, shadow = false, focus, compact = fal
         </div>
       )}
 
-      {/* Live cloud cover overlay toggle */}
-      {!panelOpen && (
+      {/* Live cloud cover toggle — shown when the sun panel is closed (or absent).
+          When the panel is open, the cloud button lives inside ShadowControls header. */}
+      {(!shadow || !panelOpen) && (
         <button
           onClick={() => cloudsAvailable() && setCloudsOn(v => !v)}
           disabled={!cloudsAvailable()}

@@ -6,6 +6,7 @@ import { getWeather, findHourly, predictSunsetColor } from '@/lib/weather';
 import { getSunTimes, getBestWindow, getSuggestedSettings, formatTime } from '@/lib/sun';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { localDateStr } from '@/lib/utils';
 import type { PhotoSpot } from '@/types';
 import { X, Loader2 } from 'lucide-react';
 
@@ -16,7 +17,7 @@ type Props = {
 };
 
 export function PlanModal({ spot, onClose, onSaved }: Props) {
-  const today = new Date().toISOString().split('T')[0];
+  const today = localDateStr();
   const [date, setDate] = useState(today);
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
@@ -78,7 +79,7 @@ export function PlanModal({ spot, onClose, onSaved }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-[var(--card)] border border-[var(--border)] rounded-t-2xl sm:rounded-2xl w-full max-w-md p-5 space-y-4">
+      <div className="relative bg-[var(--card)] border border-[var(--border)] rounded-t-2xl sm:rounded-2xl w-full max-w-md p-5 space-y-4 max-h-[90dvh] overflow-y-auto">
         <div className="flex items-center justify-between">
           <h2 className="font-bold text-lg">Plan a shoot</h2>
           <button onClick={onClose} className="text-[var(--muted)] hover:text-[var(--foreground)]">

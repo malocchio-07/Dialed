@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Sun, X, Mountain, Moon, Box } from 'lucide-react';
+import { Sun, X, Mountain, Moon, Box, Cloud } from 'lucide-react';
 import { getSunTimes, getSunPosition, formatTime, getLightPhase, LIGHT_PHASE_LABEL } from '@/lib/sun';
 import { getWeather, findHourly, predictSunsetColor } from '@/lib/weather';
 import type { WeatherData } from '@/types';
@@ -22,6 +22,9 @@ type Props = {
   lng: number;
   tilt: boolean;
   onTiltToggle: (value: boolean) => void;
+  cloudsOn: boolean;
+  onCloudsToggle: (value: boolean) => void;
+  cloudsAvailable: boolean;
 };
 
 function minutesOfDay(d: Date) {
@@ -44,6 +47,9 @@ export function ShadowControls({
   lng,
   tilt,
   onTiltToggle,
+  cloudsOn,
+  onCloudsToggle,
+  cloudsAvailable,
 }: Props) {
   const dateInputValue = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
@@ -126,6 +132,18 @@ export function ShadowControls({
           <span className={cn('text-xs font-medium', phase.textColor)}>{phase.label}</span>
         </div>
         <div className="flex items-center gap-1">
+          <button
+            onClick={() => cloudsAvailable && onCloudsToggle(!cloudsOn)}
+            disabled={!cloudsAvailable}
+            title={cloudsAvailable ? 'Toggle live cloud cover' : 'Add an OpenWeatherMap key to enable the cloud layer'}
+            className={cn(
+              'flex items-center justify-center w-7 h-7 rounded-lg transition-colors',
+              !cloudsAvailable && 'opacity-40 cursor-not-allowed',
+              cloudsOn ? 'bg-[var(--accent)] text-black' : 'text-[var(--muted)] hover:bg-[var(--card-hover)]'
+            )}
+          >
+            <Cloud className="w-4 h-4" />
+          </button>
           <button
             onClick={() => available && onSimToggle(!simEnabled)}
             disabled={!available}

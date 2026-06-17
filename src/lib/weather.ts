@@ -21,11 +21,10 @@ export async function getWeather(lat: number, lng: number, date?: string): Promi
       'hourly',
       'temperature_2m,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,relative_humidity_2m,weather_code,wind_speed_10m'
     );
-    url.searchParams.set('daily', 'weather_code,cloud_cover_mean,temperature_2m_max,wind_speed_10m_max');
+    url.searchParams.set('daily', 'weather_code,cloud_cover_mean,temperature_2m_max');
     url.searchParams.set('start_date', targetDate);
     url.searchParams.set('end_date', targetDate);
     url.searchParams.set('timezone', 'auto');
-    url.searchParams.set('forecast_days', '1');
 
     const res = await fetch(url.toString(), { next: { revalidate: 1800 } });
     if (!res.ok) return null;
@@ -51,7 +50,7 @@ export async function getWeather(lat: number, lng: number, date?: string): Promi
     return {
       cloud_cover,
       temperature: daily.temperature_2m_max?.[0] ?? 0,
-      wind_speed: daily.wind_speed_10m_max?.[0] ?? 0,
+      wind_speed: 0,
       weather_code,
       weather_description: WMO_CODES[weather_code] ?? 'Unknown',
       hourly: hourlyData,

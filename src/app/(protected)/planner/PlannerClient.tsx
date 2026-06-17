@@ -9,6 +9,7 @@ import type { ShootPlan, WeatherData, PhotoSpot, SunsetColorPrediction } from '@
 import { MapPin, Cloud, Sunrise, Sunset, Camera, Trash2, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { formatTime, getSunTimes } from '@/lib/sun';
 import { getShootabilityScore, getWeather, findHourly, predictSunsetColor } from '@/lib/weather';
+import { localDateStr } from '@/lib/utils';
 import { Suspense } from 'react';
 
 type Spot = Pick<PhotoSpot, 'id' | 'name' | 'latitude' | 'longitude'>;
@@ -21,7 +22,7 @@ function PlannerInner({ plans: initial, spots }: Props) {
   const [plans, setPlans] = useState<ShootPlan[]>(initial);
   const [expanded, setExpanded] = useState<string | null>(highlightId);
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = localDateStr();
   const upcoming = plans.filter(p => p.planned_date >= today);
   const past = plans.filter(p => p.planned_date < today);
 
@@ -99,7 +100,7 @@ type RankedResult = {
 };
 
 function SpotRanker({ spots }: { spots: Spot[] }) {
-  const today = new Date().toISOString().split('T')[0];
+  const today = localDateStr();
   const [date, setDate] = useState(today);
   const [results, setResults] = useState<RankedResult[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -187,7 +188,7 @@ function PlanCard({
   onDelete: () => void;
 }) {
   const spot = plan.photo_spots;
-  const today = new Date().toISOString().split('T')[0];
+  const today = localDateStr();
   const isUpcoming = plan.planned_date >= today;
 
   // Lazy-load live weather when expanded (only worth doing for upcoming plans).

@@ -13,6 +13,11 @@ export const STATUS_CONFIG = {
   portfolio:  { label: 'Portfolio',   color: 'bg-emerald-900 text-emerald-300' },
 } as const;
 
+/** Returns today's date as YYYY-MM-DD in the device's local timezone. */
+export function localDateStr(date = new Date()): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
 export const COMMON_TAGS = [
   'urban', 'mountain', 'coastal', 'desert', 'forest',
   'industrial', 'rooftop', 'tunnel', 'bridge', 'runway',
