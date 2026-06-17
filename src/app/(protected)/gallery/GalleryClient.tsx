@@ -100,6 +100,19 @@ export function GalleryClient({ photos: initial, spots, initialSpotId = '' }: Pr
     if (selected?.id === photo.id) setSelected({ ...photo, status });
   }
 
+  async function updateSpot(photo: Photo, spotId: string) {
+    const supabase = createClient();
+    await supabase.from('photos').update({ spot_id: spotId || null }).eq('id', photo.id);
+    const match = spots.find(s => s.id === spotId);
+    const updated: Photo = {
+      ...photo,
+      spot_id: spotId || null,
+      photo_spots: match ? { id: match.id, name: match.name } : undefined,
+    };
+    setPhotos(prev => prev.map(p => p.id === photo.id ? updated : p));
+    setSelected(updated);
+  }
+
   async function deletePhoto(photo: Photo) {
     if (!confirm('Delete this photo?')) return;
     const supabase = createClient();
@@ -216,12 +229,17 @@ export function GalleryClient({ photos: initial, spots, initialSpotId = '' }: Pr
           <div className="flex-1 relative">
             <Image src={selected.image_url} alt="" fill className="object-contain" />
           </div>
-          <div className="px-4 py-3 border-t border-[var(--border)] flex items-center justify-between">
-            <div>
-              {selected.photo_spots && (
-                <p className="text-xs text-[var(--muted)]">{selected.photo_spots.name}</p>
-              )}
-              <p className="text-xs text-[var(--muted)]">
+          <div className="px-4 py-3 border-t border-[var(--border)] flex items-center justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <select
+                value={selected.spot_id ?? ''}
+                onChange={e => updateSpot(selected, e.target.value)}
+                className="w-full text-xs bg-transparent text-[var(--muted)] focus:outline-none cursor-pointer truncate"
+              >
+                <option value="">No spot</option>
+                {spots.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+              <p className="text-xs text-[var(--muted)] mt-0.5">
                 {new Date(selected.date_taken ?? selected.created_at).toLocaleDateString()}
                 {selected.camera_used && ` · ${selected.camera_used}`}
               </p>
