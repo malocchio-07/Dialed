@@ -17,6 +17,7 @@ import {
 import { cloudsAvailable, addCloudLayer, removeCloudLayer } from '@/lib/clouds';
 import { getSunPosition, getLightPhase, LIGHT_PHASE_TINT } from '@/lib/sun';
 import { ShadowControls } from './ShadowControls';
+import { MapInfoBar } from './MapInfoBar';
 import Link from 'next/link';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
@@ -24,6 +25,8 @@ type Focus = { lat: number; lng: number; zoom?: number };
 
 type Props = {
   spots: PhotoSpot[];
+  /** spot_id → signed thumbnail URL, shown on map markers. */
+  thumbnails?: Record<string, string>;
   onAddSpot?: (lat: number, lng: number) => void;
   /** Show the sun & shade controls. */
   shadow?: boolean;
@@ -38,7 +41,7 @@ const DEFAULT_CENTER = { lat: 40.7128, lng: -74.006 };
 // across too wide an area for mobile devices to handle reliably.
 const MIN_SHADOW_ZOOM = 14;
 
-export function SpotMap({ spots, onAddSpot, shadow = false, focus, compact = false }: Props) {
+export function SpotMap({ spots, thumbnails = {}, onAddSpot, shadow = false, focus, compact = false }: Props) {
   const mapRef = useRef<MapRef>(null);
   const shadeRef = useRef<ShadeMap | null>(null);
 
@@ -179,28 +182,42 @@ export function SpotMap({ spots, onAddSpot, shadow = false, focus, compact = fal
         )}
 
         {/* Saved spots */}
-        {spots.map(spot => (
-          <Marker
-            key={spot.id}
-            longitude={spot.longitude}
-            latitude={spot.latitude}
-            anchor="bottom"
-            onClick={e => { e.originalEvent.stopPropagation(); setPopup(spot); }}
-          >
-            <button className="group flex flex-col items-center">
-              <div className={cn(
-                'w-8 h-8 rounded-full border-2 flex items-center justify-center transition-transform group-hover:scale-110',
-                popup?.id === spot.id
-                  ? 'bg-[var(--accent)] border-[var(--accent)] scale-110'
-                  : 'bg-[var(--card)] border-[var(--border)]'
-              )}>
-                <MapPin className="w-4 h-4" strokeWidth={2}
-                  color={popup?.id === spot.id ? 'black' : 'var(--accent)'}
-                />
-              </div>
-            </button>
-          </Marker>
-        ))}
+        {spots.map(spot => {
+          const thumb = thumbnails[spot.id];
+          const isActive = popup?.id === spot.id;
+          return (
+            <Marker
+              key={spot.id}
+              longitude={spot.longitude}
+              latitude={spot.latitude}
+              anchor="bottom"
+              onClick={e => { e.originalEvent.stopPropagation(); setPopup(spot); }}
+            >
+              <button className="group flex flex-col items-center">
+                {thumb ? (
+                  <div className={cn(
+                    'w-12 h-12 rounded-xl overflow-hidden border-2 shadow-lg transition-transform group-hover:scale-110',
+                    isActive ? 'border-[var(--accent)] scale-110' : 'border-white/80'
+                  )}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={thumb} alt="" className="w-full h-full object-cover" />
+                  </div>
+                ) : (
+                  <div className={cn(
+                    'w-8 h-8 rounded-full border-2 flex items-center justify-center transition-transform group-hover:scale-110',
+                    isActive
+                      ? 'bg-[var(--accent)] border-[var(--accent)] scale-110'
+                      : 'bg-[var(--card)] border-[var(--border)]'
+                  )}>
+                    <MapPin className="w-4 h-4" strokeWidth={2}
+                      color={isActive ? 'black' : 'var(--accent)'}
+                    />
+                  </div>
+                )}
+              </button>
+            </Marker>
+          );
+        })}
 
         {/* Focus marker (compact spot embed) */}
         {compact && focus && (
@@ -260,6 +277,11 @@ export function SpotMap({ spots, onAddSpot, shadow = false, focus, compact = fal
           </Popup>
         )}
       </Map>
+
+      {/* Ambient sun/weather info bar — always visible on the main map */}
+      {!compact && (
+        <MapInfoBar lat={center.lat} lng={center.lng} />
+      )}
 
       {/* Golden/blue hour color wash, driven by the scrubbable time */}
       {panelOpen && (

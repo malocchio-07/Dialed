@@ -15,6 +15,12 @@ import { Upload, X, ChevronDown } from 'lucide-react';
 // block over) but should still be close; anything farther is probably a
 // different, unsaved location, so leave spot_id for the user to set by hand.
 const AUTO_TAG_MAX_DISTANCE_KM = 2;
+
+const PHOTO_CATEGORIES = [
+  'automotive', 'interior', 'detail', 'golden hour',
+  'blue hour', 'night', 'urban', 'track', 'portrait',
+] as const;
+
 const EMPTY_META: PhotoMeta = { lat: null, lng: null, dateTaken: null, camera: null };
 function withMetaTimeout(p: Promise<PhotoMeta>, ms = 5000): Promise<PhotoMeta> {
   return Promise.race([p, new Promise<PhotoMeta>(resolve => setTimeout(() => resolve(EMPTY_META), ms))]);
@@ -45,10 +51,12 @@ export function GalleryClient({ photos: initial, spots, initialSpotId = '' }: Pr
   const [selectedSpot, setSelectedSpot] = useState<string>(initialSpotId);
   const [uploading, setUploading] = useState(false);
   const [selected, setSelected] = useState<Photo | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState('');
 
   const filtered = photos.filter(p => {
     if (filter !== 'all' && p.status !== filter) return false;
     if (selectedSpot && p.spot_id !== selectedSpot) return false;
+    if (selectedCategory && p.preset_used !== selectedCategory) return false;
     return true;
   });
 
@@ -121,6 +129,14 @@ export function GalleryClient({ photos: initial, spots, initialSpotId = '' }: Pr
     setSelected(updated);
   }
 
+  async function updateCategory(photo: Photo, category: string) {
+    const supabase = createClient();
+    await supabase.from('photos').update({ preset_used: category || null }).eq('id', photo.id);
+    const updated = { ...photo, preset_used: category || null };
+    setPhotos(prev => prev.map(p => p.id === photo.id ? updated : p));
+    setSelected(updated);
+  }
+
   async function deletePhoto(photo: Photo) {
     if (!confirm('Delete this photo?')) return;
     const supabase = createClient();
@@ -157,6 +173,33 @@ export function GalleryClient({ photos: initial, spots, initialSpotId = '' }: Pr
               }`}
             >
               {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Category filter */}
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide mt-2">
+          <button
+            onClick={() => setSelectedCategory('')}
+            className={`shrink-0 text-xs px-3 py-1.5 rounded-full border transition-colors ${
+              selectedCategory === ''
+                ? 'bg-[var(--accent)] border-[var(--accent)] text-black font-medium'
+                : 'border-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)]'
+            }`}
+          >
+            All types
+          </button>
+          {PHOTO_CATEGORIES.map(cat => (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`shrink-0 text-xs px-3 py-1.5 rounded-full border capitalize transition-colors ${
+                selectedCategory === cat
+                  ? 'bg-[var(--accent)] border-[var(--accent)] text-black font-medium'
+                  : 'border-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)]'
+              }`}
+            >
+              {cat}
             </button>
           ))}
         </div>
@@ -247,10 +290,23 @@ export function GalleryClient({ photos: initial, spots, initialSpotId = '' }: Pr
                 <option value="">No spot</option>
                 {spots.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
-              <p className="text-xs text-[var(--muted)] mt-0.5">
-                {new Date(selected.date_taken ?? selected.created_at).toLocaleDateString()}
-                {selected.camera_used && ` · ${selected.camera_used}`}
-              </p>
+              <div className="flex items-center gap-2 mt-0.5">
+                <p className="text-xs text-[var(--muted)]">
+                  {new Date(selected.date_taken ?? selected.created_at).toLocaleDateString()}
+                  {selected.camera_used && ` · ${selected.camera_used}`}
+                </p>
+                <span className="text-white/20">·</span>
+                <select
+                  value={selected.preset_used ?? ''}
+                  onChange={e => updateCategory(selected, e.target.value)}
+                  className="text-xs bg-transparent text-[var(--muted)] focus:outline-none cursor-pointer capitalize"
+                >
+                  <option value="">No category</option>
+                  {PHOTO_CATEGORIES.map(cat => (
+                    <option key={cat} value={cat} className="capitalize">{cat}</option>
+                  ))}
+                </select>
+              </div>
             </div>
             <Button variant="danger" size="sm" onClick={() => deletePhoto(selected)}>
               Delete
