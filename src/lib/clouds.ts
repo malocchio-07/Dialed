@@ -36,6 +36,10 @@ export async function addCloudLayer(map: MapboxMap): Promise<void> {
       type: 'raster',
       tiles: [`${host}${path}/256/{z}/{x}/{y}/0/0_0.png`],
       tileSize: 256,
+      // RainViewer only serves tiles up to z7; without this, city-level zooms
+      // request nonexistent tiles and the layer renders nothing. With it,
+      // mapbox overzooms (stretches) the z7 tiles instead.
+      maxzoom: 7,
       attribution: '© RainViewer',
     });
   }
