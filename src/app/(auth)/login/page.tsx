@@ -42,7 +42,15 @@ export default function LoginPage() {
         router.replace('/map');
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
+      const msg = err instanceof Error ? err.message : 'Something went wrong';
+      // Safari reports any network-level fetch failure as the unhelpful
+      // "Load failed". The usual cause here is Supabase pausing the free-tier
+      // project after ~7 days of inactivity.
+      setError(
+        /load failed|failed to fetch|network/i.test(msg)
+          ? "Can't reach the backend. If the app hasn't been used in over a week, the free Supabase project auto-pauses — open your Supabase dashboard and click Restore, then try again."
+          : msg
+      );
     } finally {
       setLoading(false);
     }

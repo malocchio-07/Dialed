@@ -5,9 +5,14 @@ import { getSunTimes, getSunPosition, getLightPhase, LIGHT_PHASE_LABEL, formatTi
 import { getWeather } from '@/lib/weather';
 import { celsiusToFahrenheit } from '@/lib/utils';
 
-type Props = { lat: number; lng: number };
+type Props = {
+  lat: number;
+  lng: number;
+  /** When set, tapping the bar opens the sun & light panel. */
+  onOpen?: () => void;
+};
 
-export function MapInfoBar({ lat, lng }: Props) {
+export function MapInfoBar({ lat, lng, onOpen }: Props) {
   const [now, setNow] = useState(() => new Date());
   const [temp, setTemp] = useState<number | null>(null);
 
@@ -36,7 +41,12 @@ export function MapInfoBar({ lat, lng }: Props) {
       : `Sunset ${formatTime(sunTimes.sunset)}`;
 
   return (
-    <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 px-4 py-2 rounded-full bg-black/75 backdrop-blur-sm text-white text-xs shadow-lg pointer-events-none whitespace-nowrap">
+    <button
+      onClick={onOpen}
+      disabled={!onOpen}
+      title={onOpen ? 'Open sun & light panel' : undefined}
+      className="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 px-4 py-2 rounded-full bg-black/75 backdrop-blur-sm text-white text-xs shadow-lg whitespace-nowrap disabled:pointer-events-none"
+    >
       <span className="font-semibold text-sm">{formatTime(now)}</span>
       <span className="text-white/30">·</span>
       <span className={phase.textColor}>{phase.label}</span>
@@ -48,6 +58,6 @@ export function MapInfoBar({ lat, lng }: Props) {
       )}
       <span className="text-white/30">·</span>
       <span className="text-white/60">{sunsetLabel}</span>
-    </div>
+    </button>
   );
 }

@@ -15,7 +15,7 @@ import {
   getBuildingFeatures,
 } from '@/lib/shademap';
 import { cloudsAvailable, addCloudLayer, removeCloudLayer } from '@/lib/clouds';
-import { getSunPosition, getLightPhase, LIGHT_PHASE_TINT } from '@/lib/sun';
+import { getSunPosition, getLightTint } from '@/lib/sun';
 import { ShadowControls } from './ShadowControls';
 import { MapInfoBar } from './MapInfoBar';
 import Link from 'next/link';
@@ -132,11 +132,16 @@ export function SpotMap({ spots, thumbnails = {}, onAddSpot, shadow = false, foc
   useEffect(() => {
     const map = mapRef.current?.getMap();
     if (!map || !mapLoaded) return;
-    if (cloudsOn && cloudsAvailable()) {
-      addCloudLayer(map);
+    let cancelled = false;
+    if (cloudsOn) {
+      // Async: fetches the latest satellite frame before adding the layer.
+      addCloudLayer(map).then(() => {
+        if (cancelled) removeCloudLayer(map);
+      });
     } else {
       removeCloudLayer(map);
     }
+    return () => { cancelled = true; };
   }, [cloudsOn, mapLoaded]);
 
   // Fly to user's current location on first load (skip for embedded focus views).
@@ -157,7 +162,7 @@ export function SpotMap({ spots, thumbnails = {}, onAddSpot, shadow = false, foc
   }, [mapLoaded]);
 
   const sunAltitudeDeg = (getSunPosition(shadowDate, center.lat, center.lng).altitude * 180) / Math.PI;
-  const lightTint = LIGHT_PHASE_TINT[getLightPhase(sunAltitudeDeg)];
+  const lightTint = getLightTint(sunAltitudeDeg);
 
   return (
     <div className="relative w-full h-full">
@@ -278,9 +283,14 @@ export function SpotMap({ spots, thumbnails = {}, onAddSpot, shadow = false, foc
         )}
       </Map>
 
-      {/* Ambient sun/weather info bar — always visible on the main map */}
+      {/* Ambient sun/weather info bar — always visible on the main map.
+          Tapping it opens the sun & light panel. */}
       {!compact && (
-        <MapInfoBar lat={center.lat} lng={center.lng} />
+        <MapInfoBar
+          lat={center.lat}
+          lng={center.lng}
+          onOpen={shadow ? () => setPanelOpen(true) : undefined}
+        />
       )}
 
       {/* Golden/blue hour color wash, driven by the scrubbable time */}
@@ -327,8 +337,9 @@ export function SpotMap({ spots, thumbnails = {}, onAddSpot, shadow = false, foc
         </div>
       )}
 
-      {/* Shadow / sun controls */}
-      {shadow && (
+      {/* Shadow / sun controls. On the main map the info bar is the entry
+          point, so the collapsed pill only renders on compact embeds. */}
+      {shadow && (panelOpen || compact) && (
         <ShadowControls
           available={shadowsAvailable()}
           enabled={panelOpen}

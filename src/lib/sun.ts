@@ -48,13 +48,37 @@ export const LIGHT_PHASE_LABEL: Record<LightPhase, { label: string; textColor: s
   day: { label: 'Daytime', textColor: 'text-emerald-400' },
 };
 
-/** Color wash simulating each phase's ambient light, overlaid on the map. */
-export const LIGHT_PHASE_TINT: Record<LightPhase, string> = {
-  night: 'rgba(8, 10, 30, 0.40)',
-  blueHour: 'rgba(30, 58, 138, 0.28)',
-  goldenHour: 'rgba(255, 140, 60, 0.20)',
-  day: 'rgba(0, 0, 0, 0)',
-};
+/** Color wash simulating ambient light, blended continuously by sun altitude.
+ *  Day → golden → pink (sunset) → magenta → blue (twilight) → night. */
+const TINT_STOPS: Array<{ alt: number; rgba: [number, number, number, number] }> = [
+  { alt: 12,  rgba: [0, 0, 0, 0] },
+  { alt: 6,   rgba: [255, 150, 60, 0.12] },
+  { alt: 2,   rgba: [255, 120, 60, 0.20] },
+  { alt: -1,  rgba: [236, 90, 130, 0.24] },
+  { alt: -4,  rgba: [150, 70, 160, 0.26] },
+  { alt: -7,  rgba: [30, 58, 138, 0.30] },
+  { alt: -12, rgba: [8, 10, 30, 0.42] },
+];
+
+export function getLightTint(altitudeDeg: number): string {
+  const stops = TINT_STOPS;
+  if (altitudeDeg >= stops[0].alt) return 'rgba(0, 0, 0, 0)';
+  const last = stops[stops.length - 1];
+  if (altitudeDeg <= last.alt) {
+    const [r, g, b, a] = last.rgba;
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+  }
+  for (let i = 0; i < stops.length - 1; i++) {
+    const hi = stops[i];
+    const lo = stops[i + 1];
+    if (altitudeDeg <= hi.alt && altitudeDeg > lo.alt) {
+      const t = (hi.alt - altitudeDeg) / (hi.alt - lo.alt);
+      const mix = hi.rgba.map((v, ch) => v + (lo.rgba[ch] - v) * t);
+      return `rgba(${Math.round(mix[0])}, ${Math.round(mix[1])}, ${Math.round(mix[2])}, ${mix[3].toFixed(3)})`;
+    }
+  }
+  return 'rgba(0, 0, 0, 0)';
+}
 
 export function formatTime(date: Date): string {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
