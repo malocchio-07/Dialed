@@ -53,11 +53,14 @@ export function ShadowControls({
 }: Props) {
   const dateInputValue = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
-  const [weather, setWeather] = useState<WeatherData | null>(null);
+  // undefined = fetch in flight, null = no forecast for this date (Open-Meteo
+  // only covers ~16 days out), WeatherData = loaded.
+  const [weather, setWeather] = useState<WeatherData | null | undefined>(undefined);
 
   useEffect(() => {
     if (!enabled) return;
     let cancelled = false;
+    setWeather(undefined);
     getWeather(lat, lng, dateInputValue).then(w => { if (!cancelled) setWeather(w); });
     return () => { cancelled = true; };
   }, [enabled, lat, lng, dateInputValue]);
@@ -217,7 +220,7 @@ export function ShadowControls({
       </div>
 
       {/* Sunset color forecast, for this map location & date */}
-      {sunsetColor && (
+      {sunsetColor ? (
         <div className="mt-3 flex items-center gap-2 rounded-lg border border-[var(--border)] p-2">
           <div
             className="w-7 h-7 rounded shrink-0 border border-[var(--border)]"
@@ -228,7 +231,11 @@ export function ShadowControls({
             <span className="text-[var(--muted)]"> — {sunsetColor.description}</span>
           </p>
         </div>
-      )}
+      ) : weather === null ? (
+        <p className="mt-3 text-xs text-[var(--muted)] leading-tight">
+          No forecast for this date — weather only covers ~16 days ahead. Sun times and shadows above are still exact.
+        </p>
+      ) : null}
 
       <input
         type="date"

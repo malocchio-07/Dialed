@@ -283,9 +283,9 @@ export function SpotMap({ spots, thumbnails = {}, onAddSpot, shadow = false, foc
         )}
       </Map>
 
-      {/* Ambient sun/weather info bar — always visible on the main map.
-          Tapping it opens the sun & light panel. */}
-      {!compact && (
+      {/* Ambient sun/weather info bar — shows the LIVE now. Hidden while the
+          sun panel is open so it can't contradict the panel's scrubbed date. */}
+      {!compact && !panelOpen && (
         <MapInfoBar
           lat={center.lat}
           lng={center.lng}

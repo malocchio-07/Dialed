@@ -110,6 +110,11 @@ export function PlanModal({ spot, onClose, onSaved }: Props) {
               <Stat label="Golden (PM)" value={formatTime(preview.sunTimes.goldenHourEvening.start)} color="text-yellow-400" />
               <Stat label="Blue hour (PM)" value={formatTime(preview.sunTimes.blueHourEvening.start)} color="text-blue-400" />
             </div>
+            {!preview.weather && (
+              <p className="pt-2 border-t border-[var(--border)] text-xs text-[var(--muted)]">
+                No forecast for this date — weather only covers ~16 days ahead. Sun times are exact; check again closer to the shoot.
+              </p>
+            )}
             {preview.weather && (
               <div className="pt-2 border-t border-[var(--border)]">
                 <div className="flex justify-between items-center">
